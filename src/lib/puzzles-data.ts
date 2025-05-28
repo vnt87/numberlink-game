@@ -31,7 +31,7 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
         createDot(0, 4, 'yellow', 0), createDot(4, 0, 'yellow', 1),
       ],
     },
-    // Add 18 more easy puzzles
+    // Add 18 more easy puzzles (will be populated by populatePuzzles)
   ],
   medium: [
     {
@@ -45,7 +45,7 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
         createDot(2, 5, 'green', 0), createDot(6, 1, 'green', 1),
       ],
     },
-    // Add 19 more medium puzzles
+    // Add 19 more medium puzzles (will be populated by populatePuzzles)
   ],
   hard: [
     {
@@ -60,7 +60,7 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
         createDot(2, 5, 'yellow', 0), createDot(5, 2, 'yellow', 1),
       ],
     },
-    // Add 19 more hard puzzles
+    // Add 19 more hard puzzles (will be populated by populatePuzzles)
   ],
 };
 
@@ -79,9 +79,9 @@ function populatePuzzles(difficulty: Difficulty, count: number) {
   }
 }
 
-populatePuzzles('easy', 3); // For testing, generate 3 easy puzzles. Max 20.
-populatePuzzles('medium', 1); // Max 20.
-populatePuzzles('hard', 1); // Max 20.
+populatePuzzles('easy', 20); // Generate 20 easy puzzles total.
+populatePuzzles('medium', 20); // Generate 20 medium puzzles total.
+populatePuzzles('hard', 20); // Generate 20 hard puzzles total.
 
 export const getPuzzle = (difficulty: Difficulty, id: number): PuzzleData | undefined => {
   return puzzles[difficulty]?.find(p => p.id === id);
