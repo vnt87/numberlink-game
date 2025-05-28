@@ -15,18 +15,18 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
     {
       id: 0,
       difficulty: 'easy',
-      name: 'Easy 1',
-      size: 5,
-      dots: [
-        createDot(0, 0, 'red', 0), createDot(4, 4, 'red', 1),
-        createDot(0, 2, 'blue', 0), createDot(3, 2, 'blue', 1),
+      name: 'Easy 1 (2x2)', // Renamed to indicate size
+      size: 2, // Changed size to 2x2
+      dots: [ // New dot configuration for a 2x2 grid that fills completely
+        createDot(0, 0, 'red', 0), createDot(1, 0, 'red', 1),
+        createDot(0, 1, 'blue', 0), createDot(1, 1, 'blue', 1),
       ],
     },
     {
       id: 1,
       difficulty: 'easy',
       name: 'Easy 2',
-      size: 5,
+      size: 5, // This puzzle might now be unsolvable if it doesn't fill the 5x5 grid
       dots: [
         createDot(1, 1, 'green', 0), createDot(3, 3, 'green', 1),
         createDot(0, 4, 'yellow', 0), createDot(4, 0, 'yellow', 1),
@@ -39,7 +39,7 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
       id: 0,
       difficulty: 'medium',
       name: 'Medium 1',
-      size: 7,
+      size: 7, // This puzzle might now be unsolvable if it doesn't fill the 7x7 grid
       dots: [
         createDot(0, 0, 'red', 0), createDot(6, 6, 'red', 1),
         createDot(1, 2, 'blue', 0), createDot(5, 2, 'blue', 1),
@@ -53,7 +53,7 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
       id: 0,
       difficulty: 'hard',
       name: 'Hard 1',
-      size: 8,
+      size: 8, // This puzzle might now be unsolvable if it doesn't fill the 8x8 grid
       dots: [
         createDot(0, 0, 'red', 0), createDot(7, 7, 'red', 1),
         createDot(0, 7, 'blue', 0), createDot(7, 0, 'blue', 1),
@@ -66,7 +66,7 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
 };
 
 // For simplicity in development, let's fill remaining puzzles with copies of the first one(s).
-// In a real scenario, these would be unique.
+// In a real scenario, these would be unique and designed to be solvable by filling the grid.
 function populatePuzzles(difficulty: Difficulty, count: number) {
   const basePuzzles = puzzles[difficulty];
   if (basePuzzles.length === 0) return; // No base puzzle to copy
@@ -75,33 +75,24 @@ function populatePuzzles(difficulty: Difficulty, count: number) {
   
   while (basePuzzles.length < count) {
     // Cycle through existing defined puzzles for variety if count > initial manually defined ones
-    const templatePuzzle = basePuzzles[ (basePuzzles.length -1) % Math.min(basePuzzles.length, 2) ]; // Use first 1 or 2 as templates
+    // Using the very first puzzle (now the 2x2 one for easy) as template for new ones.
+    const templatePuzzle = basePuzzles[0]; 
     const copy = JSON.parse(JSON.stringify(templatePuzzle)) as PuzzleData;
     
     copy.id = currentId;
     copy.name = `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${copy.id + 1}`;
-    
-    // Optional: slightly vary dot positions for copies to make them somewhat different.
-    // This is a simple variation, could be more sophisticated.
-    copy.dots = copy.dots.map((dot, index) => ({
-      ...dot,
-      // Example variation: shift x by 1 for even indices, y by 1 for odd, wrap around size
-      // This is just a placeholder for actual unique puzzle design.
-      // x: (dot.x + (index % 2 === 0 ? 1 : 0)) % copy.size,
-      // y: (dot.y + (index % 2 !== 0 ? 1 : 0)) % copy.size,
-    }));
-    // Ensure dots are not on top of each other after variation, or ensure variation is valid.
-    // For now, we will just copy directly to keep it simple as the main goal is placeholder levels.
-    // So, effectively, the above dot variation is commented out.
-    
+    if (difficulty === 'easy' && templatePuzzle.size === 2) { // Ensure new easy puzzles are also 2x2 like the template
+        copy.name = `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} ${copy.id + 1} (2x2)`;
+    }
+        
     basePuzzles.push(copy);
     currentId++;
   }
 }
 
-populatePuzzles('easy', 10); // Generate 10 easy puzzles total.
-populatePuzzles('medium', 10); // Generate 10 medium puzzles total.
-populatePuzzles('hard', 10); // Generate 10 hard puzzles total.
+populatePuzzles('easy', 10); 
+populatePuzzles('medium', 10); 
+populatePuzzles('hard', 10);
 
 export const getPuzzle = (difficulty: Difficulty, id: number): PuzzleData | undefined => {
   return puzzles[difficulty]?.find(p => p.id === id);
@@ -112,4 +103,3 @@ export const MAX_LEVELS: Record<Difficulty, number> = {
   medium: puzzles.medium.length,
   hard: puzzles.hard.length,
 };
-

@@ -114,32 +114,28 @@ export function updateGridWithPath(grid: GridCellData[][], path: DrawnPath, clea
 
 
 export function checkWinCondition(gameState: GameState, puzzle: PuzzleData): boolean {
-  const { paths, completedPairs } = gameState; // Removed grid from here for now
+  const { grid, paths, completedPairs } = gameState;
   
-  // 1. All dot pairs must be connected (i.e., their paths are marked as complete)
-  // Create a set of all unique pair IDs from the initial puzzle definition.
+  // 1. All dot pairs must be connected
   const allRequiredPairIds = new Set(puzzle.dots.map(dot => dot.pairId));
   if (completedPairs.size !== allRequiredPairIds.size) {
     return false;
   }
-  // Also ensure that every path in gameState.paths that corresponds to a requiredPairId is actually complete.
   for (const pairId of allRequiredPairIds) {
     if (!paths[pairId] || !paths[pairId].isComplete) {
       return false;
     }
   }
 
-  // 2. All cells must be filled by paths (Temporarily REMOVED for current puzzles)
-  // const { grid } = gameState;
-  // const puzzleSize = puzzle.size;
-  // for (let y = 0; y < puzzleSize; y++) {
-  //   for (let x = 0; x < puzzleSize; x++) {
-  //     if (!grid[y][x].pathId) {
-  //       return false;
-  //     }
-  //   }
-  // }
+  // 2. All cells must be filled by paths
+  const puzzleSize = puzzle.size;
+  for (let y = 0; y < puzzleSize; y++) {
+    for (let x = 0; x < puzzleSize; x++) {
+      if (!grid[y][x].pathId) { // If any cell does not have a pathId, it's not filled
+        return false;
+      }
+    }
+  }
   
-  return true; // If all pairs are connected, it's a win (for now)
+  return true; // If all pairs are connected AND all cells are filled
 }
-
