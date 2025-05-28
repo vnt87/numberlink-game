@@ -1,6 +1,6 @@
 
 import type { PuzzleData, Difficulty, Dot } from '@/types';
-import { PUZZLE_COLORS } from './puzzle-colors';
+import { PUZZLE_COLORS, COLOR_NAMES } from './puzzle-colors';
 
 const createDot = (x: number, y: number, colorName: string, index: number): Dot => ({
   id: `${colorName}-${index}`,
@@ -15,43 +15,49 @@ export const puzzles: { [key in Difficulty]: PuzzleData[] } = {
     {
       id: 0,
       difficulty: 'easy',
-      name: 'Easy 1 (2x2)',
-      size: 2,
-      dots: [ 
-        createDot(0, 0, 'red', 0), createDot(1, 0, 'red', 1),
-        createDot(0, 1, 'blue', 0), createDot(1, 1, 'blue', 1),
+      name: 'Easy 1 (5x5)',
+      size: 5,
+      dots: [
+        createDot(0, 0, COLOR_NAMES[0], 0), createDot(0, 4, COLOR_NAMES[0], 1), // Red
+        createDot(1, 0, COLOR_NAMES[1], 0), createDot(1, 4, COLOR_NAMES[1], 1), // Blue
+        createDot(2, 0, COLOR_NAMES[2], 0), createDot(2, 4, COLOR_NAMES[2], 1), // Green
+        createDot(3, 0, COLOR_NAMES[3], 0), createDot(3, 4, COLOR_NAMES[3], 1), // Yellow
+        createDot(4, 0, COLOR_NAMES[4], 0), createDot(4, 4, COLOR_NAMES[4], 1), // Orange
       ],
     },
-    // Additional easy puzzles will be populated by populatePuzzles
   ],
   medium: [
     {
       id: 0,
       difficulty: 'medium',
-      name: 'Medium 1 (3x3)',
-      size: 3, 
+      name: 'Medium 1 (6x6)',
+      size: 6,
       dots: [
-        createDot(0, 0, 'red', 0), createDot(0, 2, 'red', 1),
-        createDot(1, 0, 'blue', 0), createDot(1, 2, 'blue', 1),
-        createDot(2, 0, 'green', 0), createDot(2, 2, 'green', 1),
+        createDot(0, 0, COLOR_NAMES[0], 0), createDot(0, 5, COLOR_NAMES[0], 1), // Red
+        createDot(1, 0, COLOR_NAMES[1], 0), createDot(1, 5, COLOR_NAMES[1], 1), // Blue
+        createDot(2, 0, COLOR_NAMES[2], 0), createDot(2, 5, COLOR_NAMES[2], 1), // Green
+        createDot(3, 0, COLOR_NAMES[3], 0), createDot(3, 5, COLOR_NAMES[3], 1), // Yellow
+        createDot(4, 0, COLOR_NAMES[4], 0), createDot(4, 5, COLOR_NAMES[4], 1), // Orange
+        createDot(5, 0, COLOR_NAMES[5], 0), createDot(5, 5, COLOR_NAMES[5], 1), // Purple
       ],
     },
-    // Additional medium puzzles will be populated by populatePuzzles
   ],
   hard: [
     {
       id: 0,
       difficulty: 'hard',
-      name: 'Hard 1 (4x4)',
-      size: 4, 
+      name: 'Hard 1 (7x7)',
+      size: 7,
       dots: [
-        createDot(0, 0, 'red', 0), createDot(0, 3, 'red', 1),
-        createDot(1, 0, 'blue', 0), createDot(1, 3, 'blue', 1),
-        createDot(2, 0, 'green', 0), createDot(2, 3, 'green', 1),
-        createDot(3, 0, 'yellow', 0), createDot(3, 3, 'yellow', 1),
+        createDot(0, 0, COLOR_NAMES[0], 0), createDot(0, 6, COLOR_NAMES[0], 1), // Red
+        createDot(1, 0, COLOR_NAMES[1], 0), createDot(1, 6, COLOR_NAMES[1], 1), // Blue
+        createDot(2, 0, COLOR_NAMES[2], 0), createDot(2, 6, COLOR_NAMES[2], 1), // Green
+        createDot(3, 0, COLOR_NAMES[3], 0), createDot(3, 6, COLOR_NAMES[3], 1), // Yellow
+        createDot(4, 0, COLOR_NAMES[4], 0), createDot(4, 6, COLOR_NAMES[4], 1), // Orange
+        createDot(5, 0, COLOR_NAMES[5], 0), createDot(5, 6, COLOR_NAMES[5], 1), // Purple
+        createDot(6, 0, COLOR_NAMES[6], 0), createDot(6, 6, COLOR_NAMES[6], 1), // Pink
       ],
     },
-    // Additional hard puzzles will be populated by populatePuzzles
   ],
 };
 
@@ -69,11 +75,11 @@ function populatePuzzles(difficulty: Difficulty, count: number) {
     copy.id = currentId;
     // Update name to reflect the template size
     if (difficulty === 'easy') {
-        copy.name = `Easy ${copy.id + 1} (2x2)`;
+        copy.name = `Easy ${copy.id + 1} (${templatePuzzle.size}x${templatePuzzle.size})`;
     } else if (difficulty === 'medium') {
-        copy.name = `Medium ${copy.id + 1} (3x3)`;
+        copy.name = `Medium ${copy.id + 1} (${templatePuzzle.size}x${templatePuzzle.size})`;
     } else if (difficulty === 'hard') {
-        copy.name = `Hard ${copy.id + 1} (4x4)`;
+        copy.name = `Hard ${copy.id + 1} (${templatePuzzle.size}x${templatePuzzle.size})`;
     }
         
     basePuzzles.push(copy);
@@ -94,4 +100,3 @@ export const MAX_LEVELS: Record<Difficulty, number> = {
   medium: puzzles.medium.length,
   hard: puzzles.hard.length,
 };
-
