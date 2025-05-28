@@ -1,3 +1,4 @@
+
 import type { PuzzleData, GridCellData, Dot, DrawnPath, GameState } from '@/types';
 
 export function initializeGameState(puzzle: PuzzleData): GameState {
@@ -112,37 +113,31 @@ export function updateGridWithPath(grid: GridCellData[][], path: DrawnPath, clea
 }
 
 
-export function checkWinCondition(gameState: GameState, puzzleSize: number): boolean {
+export function checkWinCondition(gameState: GameState, puzzle: PuzzleData): boolean {
   const { grid, paths, completedPairs } = gameState;
+  const puzzleSize = puzzle.size;
   
-  // 1. All dot pairs must be connected
-  const allDotPairIds = new Set(Object.values(paths).map(p => p.id));
-  if (completedPairs.size !== allDotPairIds.size) {
+  // 1. All dot pairs must be connected (i.e., their paths are marked as complete)
+  // Create a set of all unique pair IDs from the initial puzzle definition.
+  const allRequiredPairIds = new Set(puzzle.dots.map(dot => dot.pairId));
+  if (completedPairs.size !== allRequiredPairIds.size) {
     return false;
+  }
+  // Also ensure that every path in gameState.paths that corresponds to a requiredPairId is actually complete.
+  for (const pairId of allRequiredPairIds) {
+    if (!paths[pairId] || !paths[pairId].isComplete) {
+      return false;
+    }
   }
 
   // 2. All cells must be filled by paths
   for (let y = 0; y < puzzleSize; y++) {
     for (let x = 0; x < puzzleSize; x++) {
-      if (!grid[y][x].pathColor && !grid[y][x].isDot) { // Empty non-dot cells mean not filled
+      // If any cell does not have a pathId, it's not filled.
+      // This covers empty non-dot cells. For dot cells, they MUST be part of a path.
+      // If a dot cell isn't part of a path, its pathId will be null.
+      if (!grid[y][x].pathId) {
         return false;
-      }
-      // If it's a dot, it must be part of a path (covered by pathColor or be an endpoint of a path)
-      // The `isComplete` check covers endpoints. This check is for dots not being "islands".
-      if (grid[y][x].isDot && !grid[y][x].pathColor) {
-         // Check if this dot is an endpoint of any path
-         const dot = grid[y][x].dot;
-         if (dot) {
-            const pathForDot = paths[dot.pairId];
-            if (!pathForDot || pathForDot.points.length === 0) return false; // Dot with no path
-            const firstPoint = pathForDot.points[0];
-            const lastPoint = pathForDot.points[pathForDot.points.length - 1];
-            const isEndpoint = (firstPoint.x === dot.x && firstPoint.y === dot.y) ||
-                               (lastPoint.x === dot.x && lastPoint.y === dot.y);
-            if (!isEndpoint) return false; // Dot is not an endpoint of its path
-         } else {
-           return false; // Should not happen: isDot true but no dot object
-         }
       }
     }
   }

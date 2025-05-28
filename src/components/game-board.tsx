@@ -6,29 +6,34 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { initializeGameState, isMoveValid, updateGridWithPath, checkWinCondition } from '@/lib/game-logic';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
-import WinModal from '@/components/win-modal';
-import { markLevelAsCompleted } from '@/lib/progress';
+import WinModal from '@/components/win-modal'; // Import the WinModal
+import { markLevelAsCompleted } from '@/lib/progress'; // Import progress marking
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
   puzzle: PuzzleData;
-  onLevelComplete: () => void;
-  onNextLevel: () => void;
+  onLevelComplete: () => void; // Callback when level is won (before showing modal)
+  onNextLevel: () => void; // Callback to navigate to next level
   currentLevelIndex: number;
   totalLevelsInDifficulty: number;
 }
 
-const CELL_SIZE = 50; // Adjust for desired cell size in pixels
-const DOT_RADIUS_PERCENT = 0.35; // Dot radius as percentage of cell size
-const LINE_WIDTH_PERCENT = 0.2; // Line width as percentage of cell size
+const CELL_SIZE = 50; 
+const DOT_RADIUS_PERCENT = 0.35; 
+const LINE_WIDTH_PERCENT = 0.2; 
 
-export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, currentLevelIndex, totalLevelsInDifficulty }: GameBoardProps) {
+export default function GameBoard({ 
+  puzzle, 
+  onLevelComplete, 
+  onNextLevel, 
+  currentLevelIndex, 
+  totalLevelsInDifficulty 
+}: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGameState(puzzle));
   const [isDrawing, setIsDrawing] = useState(false);
-  const [showWinModal, setShowWinModal] = useState(false);
+  const [showWinModal, setShowWinModal] = useState(false); // State for WinModal
   const svgRef = useRef<SVGSVGElement>(null);
   const [firstClickedDotInfo, setFirstClickedDotInfo] = useState<{ dot: Dot, cellCoords: {x: number, y: number} } | null>(null);
-
 
   const boardSize = puzzle.size * CELL_SIZE;
 
@@ -71,6 +76,8 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
 
   const handlePointerDown = (event: React.MouseEvent | React.TouchEvent) => {
     event.preventDefault();
+    if (showWinModal) return; // Don't interact if win modal is shown
+
     const coords = getCellCoordinates(event);
     if (!coords) return;
 
@@ -98,8 +105,7 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                         points: [prevDotCoords],
                         isComplete: false,
                     };
-                    // Temporarily use a copy of gameState for validation to avoid mutating the current state
-                    // This validation activePath is only the start point. isMoveValid will check if target (coords) is valid from it.
+                    
                     const tempGameStateForValidation = { ...gameState, activePath: tempActivePathForValidation };
 
 
@@ -107,16 +113,16 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                         let newGrid = gameState.grid;
                         const existingPath = gameState.paths[clickedDot.pairId];
                         if (existingPath && existingPath.points.length > 0 && !existingPath.isComplete) {
-                            newGrid = updateGridWithPath(newGrid, existingPath, true); // Clear previous incomplete attempt
+                            newGrid = updateGridWithPath(newGrid, existingPath, true); 
                         }
 
                         const finalClickedPath: DrawnPath = {
                             id: clickedDot.pairId,
                             color: clickedDot.color,
-                            points: [prevDotCoords, coords], // Path from first clicked to second clicked
+                            points: [prevDotCoords, coords], 
                             isComplete: true,
                         };
-                        newGrid = updateGridWithPath(newGrid, finalClickedPath); // Draw the completed path
+                        newGrid = updateGridWithPath(newGrid, finalClickedPath); 
 
                         const updatedPaths = { ...gameState.paths, [clickedDot.pairId]: finalClickedPath };
                         const updatedCompletedPairs = new Set(gameState.completedPairs).add(clickedDot.pairId);
@@ -128,20 +134,17 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                             activePath: null,
                             completedPairs: updatedCompletedPairs,
                         }));
-                        setFirstClickedDotInfo(null); // Clear selection
+                        setFirstClickedDotInfo(null); 
                         setIsDrawing(false);
                         return; 
                     } else {
-                        // Invalid adjacent click, treat as new selection
                         setFirstClickedDotInfo({ dot: clickedDot, cellCoords: coords });
-                        // Clear any active path from previous selection if it was different
                         if(gameState.activePath && gameState.activePath.id !== clickedDot.pairId){
                             const clearedOldPathGrid = updateGridWithPath(gameState.grid, gameState.activePath, true);
                             setGameState(prev => ({...prev, grid: clearedOldPathGrid, activePath: null, paths: {...prev.paths, [gameState.activePath!.id]: {...gameState.activePath!, points:[], isComplete: false}}}));
                         }
                     }
                 } else {
-                    // Dots are not adjacent, treat as new selection
                     setFirstClickedDotInfo({ dot: clickedDot, cellCoords: coords });
                      if(gameState.activePath && gameState.activePath.id !== clickedDot.pairId){
                         const clearedOldPathGrid = updateGridWithPath(gameState.grid, gameState.activePath, true);
@@ -149,9 +152,9 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                     }
                 }
             } else if (clickedDot.id === firstClickedDotInfo.dot.id) { 
-                setFirstClickedDotInfo(null); // Deselect
+                setFirstClickedDotInfo(null); 
                 setIsDrawing(false);
-                if (gameState.activePath && gameState.activePath.id === clickedDot.pairId) { // Clear any visual 1-point path
+                if (gameState.activePath && gameState.activePath.id === clickedDot.pairId) { 
                     const newGrid = updateGridWithPath(gameState.grid, gameState.activePath, true);
                     setGameState(prev => ({
                         ...prev,
@@ -165,7 +168,6 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                 }
                 return;
             } else { 
-                // Clicked a different, unrelated dot. Treat as new selection.
                 setFirstClickedDotInfo({ dot: clickedDot, cellCoords: coords });
                  if(gameState.activePath && gameState.activePath.id !== clickedDot.pairId){
                     const clearedOldPathGrid = updateGridWithPath(gameState.grid, gameState.activePath, true);
@@ -173,38 +175,36 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                 }
             }
         } else { 
-            // No dot was previously selected, so this is the first.
             setFirstClickedDotInfo({ dot: clickedDot, cellCoords: coords });
         }
 
-        // Standard drag logic initiation:
         if (!gameState.completedPairs.has(clickedDot.pairId)) {
             let newGrid = gameState.grid;
             const existingPath = gameState.paths[clickedDot.pairId];
             
             if (existingPath && existingPath.points.length > 0 && !existingPath.isComplete) {
-                 newGrid = updateGridWithPath(newGrid, existingPath, true); // Clear previous incomplete path for this color
+                 newGrid = updateGridWithPath(newGrid, existingPath, true); 
             }
             
             const newActivePath: DrawnPath = {
                 id: clickedDot.pairId,
                 color: clickedDot.color,
-                points: [{ x: coords.x, y: coords.y }], // Path starts at the clicked dot
+                points: [{ x: coords.x, y: coords.y }],
                 isComplete: false,
             };
             setGameState(prev => ({
                 ...prev,
-                grid: updateGridWithPath(newGrid, newActivePath), // Visually mark the start of the path
+                grid: updateGridWithPath(newGrid, newActivePath), 
                 activePath: newActivePath,
-                paths: { ...prev.paths, [clickedDot.pairId]: newActivePath }, // Store new active path data
+                paths: { ...prev.paths, [clickedDot.pairId]: newActivePath }, 
             }));
-            setIsDrawing(true); // Start drawing mode
+            setIsDrawing(true); 
         }
 
-    } else { // Clicked on a non-dot cell
+    } else { 
         setFirstClickedDotInfo(null); 
         setIsDrawing(false); 
-        if (gameState.activePath) { // If a path was being drawn and click is on empty cell, effectively cancels it.
+        if (gameState.activePath) { 
             const newGrid = updateGridWithPath(gameState.grid, gameState.activePath, true);
             setGameState(prev => ({
                 ...prev,
@@ -220,33 +220,31 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
   };
 
   const handlePointerMove = (event: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !gameState.activePath) return;
+    if (!isDrawing || !gameState.activePath || showWinModal) return;
     event.preventDefault();
     
     const coords = getCellCoordinates(event);
     if (!coords) return;
 
-    const { activePath } = gameState; // This is the activePath from the current state
+    const { activePath } = gameState; 
     const lastPoint = activePath.points[activePath.points.length - 1];
 
-    if (coords.x === lastPoint.x && coords.y === lastPoint.y) return; // No change if pointer hasn't moved to a new cell
+    if (coords.x === lastPoint.x && coords.y === lastPoint.y) return; 
     
     const dx = Math.abs(coords.x - lastPoint.x);
     const dy = Math.abs(coords.y - lastPoint.y);
-    if (dx + dy !== 1) return; // Ensure movement is to an adjacent cell (not diagonal, not skipping)
+    if (dx + dy !== 1) return; 
 
 
-    // Check if retracing path
     const pointIndexInPath = activePath.points.findIndex(p => p.x === coords.x && p.y === coords.y);
     if (pointIndexInPath !== -1) { 
-      // Pointer moved back onto a previous point in the active path. Shorten it.
-      const newPoints = activePath.points.slice(0, pointIndexInPath + 1); // Keep points up to and including the retraced point
-      const clearedPathSegment = { ...activePath, points: activePath.points.slice(pointIndexInPath + 1) }; // Points to be cleared from grid
+      const newPoints = activePath.points.slice(0, pointIndexInPath + 1); 
+      const clearedPathSegment = { ...activePath, points: activePath.points.slice(pointIndexInPath + 1) }; 
       
-      let newGrid = updateGridWithPath(gameState.grid, clearedPathSegment, true); // Clear the part of the path that was retraced over
+      let newGrid = updateGridWithPath(gameState.grid, clearedPathSegment, true); 
       
       const updatedActivePathForRetrace = { ...activePath, points: newPoints };
-      newGrid = updateGridWithPath(newGrid, updatedActivePathForRetrace); // Redraw the shortened path
+      newGrid = updateGridWithPath(newGrid, updatedActivePathForRetrace); 
 
       setGameState(prev => ({
         ...prev,
@@ -257,34 +255,26 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
       return;
     }
 
-    // Moving to a new cell (not retracing)
     if (isMoveValid(gameState, coords.x, coords.y)) {
       const newPoints = [...activePath.points, { x: coords.x, y: coords.y }];
       const updatedActivePath = { ...activePath, points: newPoints };
       
-      // Update state to reflect the new path segment being drawn
       setGameState(prev => ({
         ...prev,
-        grid: updateGridWithPath(prev.grid, updatedActivePath), // Draw the new segment on the grid
-        activePath: updatedActivePath, // Update the activePath in the state
-        paths: { ...prev.paths, [activePath.id]: updatedActivePath }, // Update the paths collection
+        grid: updateGridWithPath(prev.grid, updatedActivePath), 
+        activePath: updatedActivePath, 
+        paths: { ...prev.paths, [activePath.id]: updatedActivePath }, 
       }));
-
-      // Path completion is handled by handlePointerUp when the user releases the pointer.
-      // No explicit call to handlePointerUp() here.
     }
   };
 
   const handlePointerUp = () => {
-    const currentActivePath = gameState.activePath; // Capture before setIsDrawing(false) or state changes
+    const currentActivePath = gameState.activePath; 
+    if (showWinModal) return; // Prevent changes if win modal is already up
 
     if (!isDrawing || !currentActivePath) {
         setIsDrawing(false); 
-        // This block handles cases like a click that set an activePath but didn't start 'drawing',
-        // or if pointer up occurs without a valid drag start.
         if (currentActivePath && currentActivePath.points.length > 0 && !currentActivePath.isComplete) {
-             // An incomplete path exists (e.g. single click on dot, or abandoned short drag)
-             // Clear its visual representation from the grid if it's not already cleared.
              const gridWithClearedPath = updateGridWithPath(gameState.grid, currentActivePath, true);
              const updatedPathsForClear = {
                  ...gameState.paths,
@@ -295,47 +285,38 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                  grid: gridWithClearedPath,
                  paths: updatedPathsForClear,
                  activePath: null,
-                 // firstClickedDotInfo should persist if this was just a single click on a dot.
-                 // It's cleared on successful path, or explicitly by other logic in handlePointerDown.
              }));
         }
         return;
     }
     
-    setIsDrawing(false); // End drawing mode
+    setIsDrawing(false); 
 
-    const { grid } = gameState; // Grid from the state, which includes the path drawn up to the last point
+    const { grid } = gameState; 
     const lastPoint = currentActivePath.points[currentActivePath.points.length - 1];
-    const targetCell = grid[lastPoint.y][lastPoint.x]; // Cell where the pointer was released
+    const targetCell = grid[lastPoint.y][lastPoint.x]; 
 
     let updatedPaths = { ...gameState.paths };
     let updatedCompletedPairs = new Set(gameState.completedPairs);
-    let finalGrid = grid; // By default, the grid is as is (with path drawn by handlePointerMove)
+    let finalGrid = grid; 
 
     const startPointOfActivePath = currentActivePath.points[0];
-    // Check if the path ended on the correct matching dot
     const isTargetPathValidForCompletion = 
         targetCell.isDot && 
         targetCell.dot?.pairId === currentActivePath.id && 
-        currentActivePath.points.length > 1 && // Path must have at least two points (start and end)
-        (targetCell.dot.x !== startPointOfActivePath.x || targetCell.dot.y !== startPointOfActivePath.y); // Not the same dot
+        currentActivePath.points.length > 1 && 
+        (targetCell.dot.x !== startPointOfActivePath.x || targetCell.dot.y !== startPointOfActivePath.y); 
 
     if (isTargetPathValidForCompletion) {
-      // Path completed successfully
       const completedPath = { ...currentActivePath, isComplete: true };
       updatedPaths[currentActivePath.id] = completedPath;
       updatedCompletedPairs.add(currentActivePath.id);
-      setFirstClickedDotInfo(null); // Clear single-dot selection state
-      // finalGrid already reflects the drawn path from handlePointerMove.
-      // The updateGridWithPath in handlePointerMove took care of pathColor/pathId on cells.
+      finalGrid = updateGridWithPath(grid, completedPath); // Ensure final path properties are set
+      setFirstClickedDotInfo(null); 
     } else {
-      // Path did not end on a valid target dot (e.g., lifted on empty cell, wrong dot, or same dot)
-      finalGrid = updateGridWithPath(grid, currentActivePath, true); // Clear the visual path from the grid
-      updatedPaths[currentActivePath.id] = { ...currentActivePath, points: [], isComplete: false }; // Reset path data
+      finalGrid = updateGridWithPath(grid, currentActivePath, true); 
+      updatedPaths[currentActivePath.id] = { ...currentActivePath, points: [], isComplete: false }; 
       
-      // If the failed path was a drag (more than 1 point), clear firstClickedDotInfo.
-      // If it was a single point path (e.g. click on a dot, then mouseup without valid connect/drag),
-      // firstClickedDotInfo (set by handlePointerDown) should persist.
       if (currentActivePath.points.length > 1) {
           setFirstClickedDotInfo(null);
       }
@@ -345,23 +326,22 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
       ...prev,
       grid: finalGrid,
       paths: updatedPaths,
-      activePath: null, // Always nullify activePath after pointer up
+      activePath: null, 
       completedPairs: updatedCompletedPairs,
     }));
   };
   
   useEffect(() => {
-    if (gameState.activePath === null && !isDrawing && !firstClickedDotInfo) { // Check win only when no interaction is active
-        const puzzleIsWon = checkWinCondition(gameState, puzzle.size);
+    // Check for win condition only if not currently drawing, no active path, no first dot selected, and modal not already shown
+    if (!isDrawing && !gameState.activePath && !firstClickedDotInfo && !showWinModal) {
+        const puzzleIsWon = checkWinCondition(gameState, puzzle);
         if (puzzleIsWon) {
-            setShowWinModal(true);
             markLevelAsCompleted(puzzle.difficulty, puzzle.id);
-            onLevelComplete();
+            onLevelComplete(); // Call original onLevelComplete if needed for parent state
+            setShowWinModal(true);
         }
     }
-  // Dependencies: check win when gameState changes, but specifically when interaction might have concluded.
-  // Adding firstClickedDotInfo to dependencies to re-check if a click-connection was the last action.
-  }, [gameState, puzzle.size, puzzle.difficulty, puzzle.id, onLevelComplete, isDrawing, firstClickedDotInfo]);
+  }, [gameState, puzzle, onLevelComplete, isDrawing, firstClickedDotInfo, showWinModal]);
 
 
   return (
@@ -377,7 +357,7 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp} // If mouse leaves board while drawing, treat as pointer up (cancels path)
+          onMouseLeave={handlePointerUp} 
           onTouchStart={handlePointerDown}
           onTouchMove={handlePointerMove}
           onTouchEnd={handlePointerUp}
@@ -390,24 +370,24 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
             </React.Fragment>
           ))}
 
-          {/* Drawn paths (both complete and incomplete segments from gameState.paths) */}
+          {/* Drawn paths */}
           {Object.values(gameState.paths).map(path =>
-            path.points.length > 1 && ( // Only draw if path has at least two points
+            path.points.length > 1 && ( 
               <polyline
-                key={`${path.id}-path`} // Ensure unique key if path id isn't globally unique for paths vs activePath
+                key={`${path.id}-path`}
                 points={path.points.map(p => `${p.x * CELL_SIZE + CELL_SIZE / 2},${p.y * CELL_SIZE + CELL_SIZE / 2}`).join(' ')}
                 fill="none"
                 stroke={path.color}
                 strokeWidth={CELL_SIZE * LINE_WIDTH_PERCENT}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={path.isComplete ? 'opacity-100' : 'opacity-70'} // Completed paths fully opaque
+                className={cn("transition-opacity", path.isComplete ? 'opacity-100' : 'opacity-70')}
               />
             )
           )}
           
-          {/* Active path being drawn (if different from gameState.paths representation or needs special styling) */}
-          {gameState.activePath && gameState.activePath.points.length > 1 && (
+          {/* Active path being drawn */}
+          {gameState.activePath && gameState.activePath.points.length > 0 && ( // Show even single point for immediate feedback
              <polyline
                 key={`${gameState.activePath.id}-active`}
                 points={gameState.activePath.points.map(p => `${p.x * CELL_SIZE + CELL_SIZE / 2},${p.y * CELL_SIZE + CELL_SIZE / 2}`).join(' ')}
@@ -416,7 +396,7 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
                 strokeWidth={CELL_SIZE * LINE_WIDTH_PERCENT}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="opacity-50" // Active path might be slightly different opacity or animated
+                className="opacity-50" 
               />
           )}
 
@@ -430,8 +410,8 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
               fill={dot.color}
               className={cn("cursor-pointer transition-all", 
                 { 
-                  "ring-2 ring-offset-1 ring-foreground dark:ring-offset-background": firstClickedDotInfo?.dot.id === dot.id,
-                  "opacity-50": gameState.completedPairs.has(dot.pairId) && !(firstClickedDotInfo?.dot.id === dot.id)
+                  "ring-2 ring-offset-2 ring-foreground dark:ring-offset-background": firstClickedDotInfo?.dot.id === dot.id,
+                  "opacity-60": gameState.completedPairs.has(dot.pairId) && !(firstClickedDotInfo?.dot.id === dot.id)
                 }
               )}
               data-dot-id={dot.id}
@@ -439,7 +419,7 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
           ))}
         </svg>
       </div>
-      <Button onClick={resetBoard} variant="outline">
+      <Button onClick={resetBoard} variant="outline" disabled={showWinModal}>
         <RotateCcw className="mr-2 h-4 w-4" /> Reset Board
       </Button>
       {showWinModal && (
@@ -447,7 +427,7 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
           isOpen={showWinModal}
           onClose={() => setShowWinModal(false)}
           onNextLevel={onNextLevel}
-          onReplay={resetBoard}
+          onReplay={resetBoard} // resetBoard also closes the modal via its own state update
           currentLevelIndex={currentLevelIndex}
           totalLevelsInDifficulty={totalLevelsInDifficulty}
         />
@@ -455,4 +435,3 @@ export default function GameBoard({ puzzle, onLevelComplete, onNextLevel, curren
     </div>
   );
 }
-
