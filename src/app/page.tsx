@@ -14,7 +14,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col items-center justify-center space-y-8">
       <div className="text-center">
-        <h1 className="text-5xl font-bold text-primary">Welcome to Connectify!</h1>
+        <h1 className="text-5xl font-bold text-primary">Welcome to StretchyKats!</h1>
         <p className="text-muted-foreground mt-2 text-lg">Connect the dots, fill the board, and solve the puzzles.</p>
       </div>
 

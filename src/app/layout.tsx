@@ -11,7 +11,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: 'Connectify',
+  title: 'StretchyKats',
   description: 'A fun and challenging line-drawing puzzle game.',
 };
 

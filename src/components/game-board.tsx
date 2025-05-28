@@ -6,14 +6,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { initializeGameState, isMoveValid, updateGridWithPath, checkWinCondition } from '@/lib/game-logic';
 import { Button } from '@/components/ui/button';
 import { RotateCcw } from 'lucide-react';
-import WinModal from '@/components/win-modal'; // Import the WinModal
-import { markLevelAsCompleted } from '@/lib/progress'; // Import progress marking
+import WinModal from '@/components/win-modal';
+import { markLevelAsCompleted } from '@/lib/progress';
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
   puzzle: PuzzleData;
-  onLevelComplete: () => void; // Callback when level is won (before showing modal)
-  onNextLevel: () => void; // Callback to navigate to next level
+  onLevelComplete: () => void; 
+  onNextLevel: () => void; 
   currentLevelIndex: number;
   totalLevelsInDifficulty: number;
 }
@@ -31,7 +31,7 @@ export default function GameBoard({
 }: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGameState(puzzle));
   const [isDrawing, setIsDrawing] = useState(false);
-  const [showWinModal, setShowWinModal] = useState(false); // State for WinModal
+  const [showWinModal, setShowWinModal] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const [firstClickedDotInfo, setFirstClickedDotInfo] = useState<{ dot: Dot, cellCoords: {x: number, y: number} } | null>(null);
 
@@ -76,7 +76,7 @@ export default function GameBoard({
 
   const handlePointerDown = (event: React.MouseEvent | React.TouchEvent) => {
     event.preventDefault();
-    if (showWinModal) return; // Don't interact if win modal is shown
+    if (showWinModal) return; 
 
     const coords = getCellCoordinates(event);
     if (!coords) return;
@@ -270,7 +270,7 @@ export default function GameBoard({
 
   const handlePointerUp = () => {
     const currentActivePath = gameState.activePath; 
-    if (showWinModal) return; // Prevent changes if win modal is already up
+    if (showWinModal) return;
 
     if (!isDrawing || !currentActivePath) {
         setIsDrawing(false); 
@@ -311,7 +311,7 @@ export default function GameBoard({
       const completedPath = { ...currentActivePath, isComplete: true };
       updatedPaths[currentActivePath.id] = completedPath;
       updatedCompletedPairs.add(currentActivePath.id);
-      finalGrid = updateGridWithPath(grid, completedPath); // Ensure final path properties are set
+      finalGrid = updateGridWithPath(grid, completedPath); 
       setFirstClickedDotInfo(null); 
     } else {
       finalGrid = updateGridWithPath(grid, currentActivePath, true); 
@@ -332,12 +332,11 @@ export default function GameBoard({
   };
   
   useEffect(() => {
-    // Check for win condition only if not currently drawing, no active path, no first dot selected, and modal not already shown
     if (!isDrawing && !gameState.activePath && !firstClickedDotInfo && !showWinModal) {
         const puzzleIsWon = checkWinCondition(gameState, puzzle);
         if (puzzleIsWon) {
             markLevelAsCompleted(puzzle.difficulty, puzzle.id);
-            onLevelComplete(); // Call original onLevelComplete if needed for parent state
+            onLevelComplete();
             setShowWinModal(true);
         }
     }
@@ -387,7 +386,7 @@ export default function GameBoard({
           )}
           
           {/* Active path being drawn */}
-          {gameState.activePath && gameState.activePath.points.length > 0 && ( // Show even single point for immediate feedback
+          {gameState.activePath && gameState.activePath.points.length > 0 && ( 
              <polyline
                 key={`${gameState.activePath.id}-active`}
                 points={gameState.activePath.points.map(p => `${p.x * CELL_SIZE + CELL_SIZE / 2},${p.y * CELL_SIZE + CELL_SIZE / 2}`).join(' ')}
@@ -427,7 +426,7 @@ export default function GameBoard({
           isOpen={showWinModal}
           onClose={() => setShowWinModal(false)}
           onNextLevel={onNextLevel}
-          onReplay={resetBoard} // resetBoard also closes the modal via its own state update
+          onReplay={resetBoard} 
           currentLevelIndex={currentLevelIndex}
           totalLevelsInDifficulty={totalLevelsInDifficulty}
         />

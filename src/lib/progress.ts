@@ -1,6 +1,6 @@
 import type { Difficulty, LevelCompletionStatus } from '@/types';
 
-const PROGRESS_KEY_PREFIX = 'connectify-progress';
+const PROGRESS_KEY_PREFIX = 'stretchykats-progress'; // Renamed prefix
 
 export function getCompletedLevels(difficulty: Difficulty): number[] {
   if (typeof window === 'undefined') return [];

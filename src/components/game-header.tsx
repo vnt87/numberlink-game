@@ -18,7 +18,7 @@ export default function GameHeader() {
     <header className="bg-card border-b border-border shadow-sm">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
-          Connectify
+          StretchyKats
         </Link>
         <div className="flex items-center space-x-2">
           <DropdownMenu>
