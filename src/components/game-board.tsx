@@ -21,6 +21,9 @@ interface GameBoardProps {
 const CELL_SIZE = 50; 
 const DOT_RADIUS_PERCENT = 0.35; 
 const LINE_WIDTH_PERCENT = 0.2; 
+const MAX_HINTS = 3;
+const HINT_ANIMATION_DURATION = 600; // ms
+const HINT_VISIBLE_DURATION = 1000; // ms
 
 export default function GameBoard({ 
   puzzle, 
@@ -34,6 +37,12 @@ export default function GameBoard({
   const [showWinModal, setShowWinModal] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const [firstClickedDotInfo, setFirstClickedDotInfo] = useState<{ dot: Dot, cellCoords: {x: number, y: number} } | null>(null);
+  
+  const [remainingHints, setRemainingHints] = useState(MAX_HINTS);
+  const [hintData, setHintData] = useState<{ path: DrawnPath | null; visiblePoints: { x: number; y: number }[] }>({
+    path: null,
+    visiblePoints: [],
+  });
 
   const boardSize = puzzle.size * CELL_SIZE;
 
@@ -42,6 +51,8 @@ export default function GameBoard({
     setShowWinModal(false);
     setFirstClickedDotInfo(null);
     setIsDrawing(false);
+    setRemainingHints(MAX_HINTS);
+    setHintData({ path: null, visiblePoints: [] });
   }, [puzzle]);
 
   useEffect(() => {
@@ -76,7 +87,7 @@ export default function GameBoard({
 
   const handlePointerDown = (event: React.MouseEvent | React.TouchEvent) => {
     event.preventDefault();
-    if (showWinModal) return; 
+    if (showWinModal || hintData.path) return; // Prevent interaction during hint
 
     const coords = getCellCoordinates(event);
     if (!coords) return;
@@ -107,7 +118,6 @@ export default function GameBoard({
                     };
                     
                     const tempGameStateForValidation = { ...gameState, activePath: tempActivePathForValidation };
-
 
                     if (isMoveValid(tempGameStateForValidation, coords.x, coords.y)) {
                         let newGrid = gameState.grid;
@@ -220,7 +230,7 @@ export default function GameBoard({
   };
 
   const handlePointerMove = (event: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !gameState.activePath || showWinModal) return;
+    if (!isDrawing || !gameState.activePath || showWinModal || hintData.path) return;
     event.preventDefault();
     
     const coords = getCellCoordinates(event);
@@ -234,7 +244,6 @@ export default function GameBoard({
     const dx = Math.abs(coords.x - lastPoint.x);
     const dy = Math.abs(coords.y - lastPoint.y);
     if (dx + dy !== 1) return; 
-
 
     const pointIndexInPath = activePath.points.findIndex(p => p.x === coords.x && p.y === coords.y);
     if (pointIndexInPath !== -1) { 
@@ -255,7 +264,6 @@ export default function GameBoard({
       return;
     }
 
-    // If moving into the target dot for the active path
     const targetCell = gameState.grid[coords.y][coords.x];
     if (targetCell.isDot && targetCell.dot?.pairId === activePath.id) {
         const newPoints = [...activePath.points, { x: coords.x, y: coords.y }];
@@ -266,7 +274,6 @@ export default function GameBoard({
             activePath: updatedActivePath,
             paths: { ...prev.paths, [activePath.id]: updatedActivePath },
         }));
-        // Path will be finalized on PointerUp
         return;
     }
 
@@ -285,7 +292,7 @@ export default function GameBoard({
 
   const handlePointerUp = () => {
     const currentActivePath = gameState.activePath; 
-    if (showWinModal) return;
+    if (showWinModal || hintData.path) return;
 
     if (!isDrawing || !currentActivePath) {
         setIsDrawing(false); 
@@ -347,7 +354,7 @@ export default function GameBoard({
   };
   
   useEffect(() => {
-    if (!isDrawing && !gameState.activePath && !firstClickedDotInfo && !showWinModal) {
+    if (!isDrawing && !gameState.activePath && !firstClickedDotInfo && !showWinModal && !hintData.path) {
         const puzzleIsWon = checkWinCondition(gameState, puzzle);
         if (puzzleIsWon) {
             markLevelAsCompleted(puzzle.difficulty, puzzle.id);
@@ -355,10 +362,11 @@ export default function GameBoard({
             setShowWinModal(true);
         }
     }
-  }, [gameState, puzzle, onLevelComplete, isDrawing, firstClickedDotInfo, showWinModal]);
+  }, [gameState, puzzle, onLevelComplete, isDrawing, firstClickedDotInfo, showWinModal, hintData.path]);
+
 
   const handleHint = () => {
-    if (showWinModal) return;
+    if (remainingHints <= 0 || hintData.path || showWinModal || allPairsCompleted) return;
 
     const incompletePairIds = puzzle.dots
       .map(dot => dot.pairId)
@@ -367,17 +375,18 @@ export default function GameBoard({
       );
 
     if (incompletePairIds.length === 0) {
-      return; // All pairs completed or no puzzle loaded
+      return; 
     }
+
+    setRemainingHints(prev => prev - 1);
 
     const randomPairId = incompletePairIds[Math.floor(Math.random() * incompletePairIds.length)];
     const pairDots = puzzle.dots.filter(dot => dot.pairId === randomPairId);
-    if (pairDots.length !== 2) return; // Should always be 2
+    if (pairDots.length !== 2) return;
 
     const [dot1, dot2] = pairDots;
-
-    // Construct the simple straight line path (current puzzles are vertical lines)
     const hintPathPoints: { x: number; y: number }[] = [];
+    
     if (dot1.x === dot2.x) { // Vertical line
       const startY = Math.min(dot1.y, dot2.y);
       const endY = Math.max(dot1.y, dot2.y);
@@ -391,40 +400,62 @@ export default function GameBoard({
         hintPathPoints.push({ x, y: dot1.y });
       }
     } else {
-        // This case should not happen with current simple puzzle definitions
         console.error("Hint logic error: Dots are not aligned for a simple path.");
         return;
     }
     
     if (hintPathPoints.length === 0) return;
 
-    const hintPath: DrawnPath = {
-      id: randomPairId,
-      color: dot1.color,
-      points: hintPathPoints,
-      isComplete: true,
-    };
+    setHintData({
+      path: { id: randomPairId, color: dot1.color, points: hintPathPoints, isComplete: false },
+      visiblePoints: [],
+    });
+  };
 
-    let newGrid = gameState.grid;
-    // Clear any existing incomplete path for this pairId
-    const existingPath = gameState.paths[randomPairId];
-    if (existingPath && !existingPath.isComplete && existingPath.points.length > 0) {
-      newGrid = updateGridWithPath(newGrid, existingPath, true);
+  useEffect(() => {
+    let animationTimer: NodeJS.Timeout | undefined;
+    let hideTimer: NodeJS.Timeout | undefined;
+
+    if (hintData.path && hintData.visiblePoints.length < hintData.path.points.length) {
+      const pointsToAnimate = hintData.path.points;
+      const currentVisibleCount = hintData.visiblePoints.length;
+
+      if (pointsToAnimate.length <= 1) { // Path too short to animate
+        setHintData(prev => ({ ...prev, visiblePoints: pointsToAnimate }));
+        return;
+      }
+      
+      if (currentVisibleCount === 0) {
+        // Add the first point immediately
+        setHintData(prev => ({ ...prev, visiblePoints: [pointsToAnimate[0]] }));
+      } else {
+        // Animate subsequent points
+        const numberOfSegments = pointsToAnimate.length - 1;
+        const delayPerSegment = HINT_ANIMATION_DURATION / numberOfSegments;
+
+        animationTimer = setTimeout(() => {
+          setHintData(prev => {
+            if (!prev.path) return prev; // Path might have been cleared
+            const nextPoint = prev.path.points[prev.visiblePoints.length];
+            if (nextPoint) {
+              return { ...prev, visiblePoints: [...prev.visiblePoints, nextPoint] };
+            }
+            return prev;
+          });
+        }, delayPerSegment);
+      }
+    } else if (hintData.path && hintData.visiblePoints.length > 0 && hintData.visiblePoints.length === hintData.path.points.length) {
+      // All points are visible, set timer to hide the hint
+      hideTimer = setTimeout(() => {
+        setHintData({ path: null, visiblePoints: [] });
+      }, HINT_VISIBLE_DURATION);
     }
 
-    newGrid = updateGridWithPath(newGrid, hintPath);
-    const updatedPaths = { ...gameState.paths, [randomPairId]: hintPath };
-    const updatedCompletedPairs = new Set(gameState.completedPairs).add(randomPairId);
-
-    setGameState(prev => ({
-      ...prev,
-      grid: newGrid,
-      paths: updatedPaths,
-      activePath: null, // Ensure no active path after hint
-      completedPairs: updatedCompletedPairs,
-    }));
-    setFirstClickedDotInfo(null); // Clear any clicked dot selection
-  };
+    return () => {
+      if (animationTimer) clearTimeout(animationTimer);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, [hintData]);
 
 
   const allPairsCompleted = puzzle.dots
@@ -489,6 +520,22 @@ export default function GameBoard({
               />
           )}
 
+          {/* Animated Hint Path */}
+          {hintData.path && hintData.visiblePoints.length > 0 && (
+            <polyline
+              key="hint-path-animation"
+              points={hintData.visiblePoints.map(p => `${p.x * CELL_SIZE + CELL_SIZE / 2},${p.y * CELL_SIZE + CELL_SIZE / 2}`).join(' ')}
+              fill="none"
+              stroke={hintData.path.color} 
+              strokeWidth={CELL_SIZE * LINE_WIDTH_PERCENT * 0.7} 
+              strokeDasharray="3 3" 
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="pointer-events-none opacity-90" 
+            />
+          )}
+
+
           {/* Dots */}
           {puzzle.dots.map(dot => (
             <circle
@@ -509,11 +556,15 @@ export default function GameBoard({
         </svg>
       </div>
       <div className="flex space-x-3">
-        <Button onClick={resetBoard} variant="outline" disabled={showWinModal}>
+        <Button onClick={resetBoard} variant="outline" disabled={showWinModal || !!hintData.path}>
           <RotateCcw className="mr-2 h-4 w-4" /> Reset Board
         </Button>
-        <Button onClick={handleHint} variant="outline" disabled={showWinModal || allPairsCompleted}>
-          <Lightbulb className="mr-2 h-4 w-4" /> Hint
+        <Button 
+          onClick={handleHint} 
+          variant="outline" 
+          disabled={showWinModal || allPairsCompleted || remainingHints === 0 || !!hintData.path}
+        >
+          <Lightbulb className="mr-2 h-4 w-4" /> Hint ({remainingHints})
         </Button>
       </div>
       {showWinModal && (
@@ -529,4 +580,3 @@ export default function GameBoard({
     </div>
   );
 }
-
