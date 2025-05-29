@@ -1,5 +1,5 @@
 
-"use client"; // Added "use client" as useIsMobile and localStorage are client-side
+"use client";
 
 import Link from 'next/link';
 import { puzzles, MAX_LEVELS } from '@/lib/puzzles-data';
@@ -8,18 +8,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, Lock } from 'lucide-react';
 import { ProgressIndicator } from '@/components/progress-indicator';
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile
-import { useEffect, useState } from 'react'; // Import useEffect and useState for localStorage
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useEffect, useState, use } from 'react'; // Import use from React
 
-interface LevelPageProps {
-  params: {
-    difficulty: Difficulty;
-  };
+// Interface for the actual shape of parameters once resolved from the URL
+interface PageResolvedParams {
+  difficulty: string; // Route params are initially strings
 }
 
-export default function LevelSelectPage({ params }: LevelPageProps) {
-  const { difficulty } = params;
-  const isMobile = useIsMobile(); // Use the hook
+// Props for the Page component. Next.js passes `params` as a Promise here.
+interface LevelSelectPageProps {
+  params: Promise<PageResolvedParams>;
+}
+
+export default function LevelSelectPage({ params: paramsPromise }: LevelSelectPageProps) {
+  // Unwrap the Promise to get the actual params object
+  // React.use() will suspend if the promise is not yet resolved.
+  const resolvedParams = use(paramsPromise);
+  // Cast the string 'difficulty' from params to our Difficulty union type
+  const difficulty = resolvedParams.difficulty as Difficulty;
+
+  const isMobile = useIsMobile();
 
   const levelsForDifficulty = puzzles[difficulty] || [];
   const totalLevels = MAX_LEVELS[difficulty] || 0;
@@ -69,7 +78,6 @@ export default function LevelSelectPage({ params }: LevelPageProps) {
           const level = levelsForDifficulty.find(l => l.id === i);
           const isCompleted = completedLevels.includes(i);
           // For now, all levels are unlocked.
-          // const isLocked = i > 0 && !completedLevels.includes(i - 1); // Example locking logic
           const isLocked = false; 
 
           return (
@@ -103,3 +111,5 @@ export default function LevelSelectPage({ params }: LevelPageProps) {
     </div>
   );
 }
+
+    
