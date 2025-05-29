@@ -1,5 +1,5 @@
 
-import type { PuzzleData, GridCellData, Dot, DrawnPath, GameState } from '@/types';
+import type { PuzzleData, GridCellData, Dot, DrawnPath, GameState, FlowData } from '@/types';
 
 export function initializeGameState(puzzle: PuzzleData): GameState {
   const grid: GridCellData[][] = Array(puzzle.size)
@@ -17,24 +17,25 @@ export function initializeGameState(puzzle: PuzzleData): GameState {
     );
 
   const paths: Record<string, DrawnPath> = {};
-  const dotMap: Map<string, Dot> = new Map(); // Store dots by their unique ID for quick lookup
+  
+  puzzle.flows.forEach(flow => {
+    flow.dots.forEach(dot => {
+      if (grid[dot.y] && grid[dot.y][dot.x]) {
+        grid[dot.y][dot.x] = {
+          x: dot.x,
+          y: dot.y,
+          isDot: true,
+          dot: { ...dot, pairId: flow.pairId }, // Ensure dot has pairId for consistency if needed elsewhere
+          pathColor: null,
+          pathId: null,
+        };
+      }
+    });
 
-  puzzle.dots.forEach(dot => {
-    grid[dot.y][dot.x] = {
-      x: dot.x,
-      y: dot.y,
-      isDot: true,
-      dot: { ...dot }, // Store a copy of the dot object
-      pathColor: null, // Dots initially don't have a path over them unless drawing starts
-      pathId: null,
-    };
-    dotMap.set(dot.id, dot);
-
-    // Initialize paths for each color pair
-    if (!paths[dot.pairId]) {
-      paths[dot.pairId] = {
-        id: dot.pairId,
-        color: dot.color,
+    if (!paths[flow.pairId]) {
+      paths[flow.pairId] = {
+        id: flow.pairId,
+        color: flow.color,
         points: [],
         isComplete: false,
       };
@@ -56,9 +57,8 @@ export function isMoveValid(
 ): boolean {
   if (!gameState.activePath) return false;
   const { grid, activePath } = gameState;
-  const { size } = grid.length === 0 ? { size: 0 } : { size: grid.length }; // Assuming square grid
+  const { size } = grid.length === 0 ? { size: 0 } : { size: grid.length };
 
-  // Check bounds
   if (targetX < 0 || targetX >= size || targetY < 0 || targetY >= size) {
     return false;
   }
@@ -67,29 +67,23 @@ export function isMoveValid(
   const activePathColor = activePath.color;
   const activePathId = activePath.id;
 
-  // If target cell is a dot
   if (currentCell.isDot) {
-    // Can only end on a dot of the same color/pairId, and it must be the other dot of the pair
-    const startDot = activePath.points[0];
-    // Check if target dot is different from start dot but has same pairId
-    return currentCell.dot?.pairId === activePathId && 
-           (currentCell.dot.x !== startDot.x || currentCell.dot.y !== startDot.y);
+    const startDotCellInPath = activePath.points[0];
+    // A dot on the grid has a `dot` property. This `dot` property should have a `pairId`.
+    // `activePath.id` is the `pairId` of the flow being drawn.
+    return currentCell.dot?.pairId === activePathId &&
+           (currentCell.dot.x !== startDotCellInPath.x || currentCell.dot.y !== startDotCellInPath.y);
   }
 
-  // If target cell is not a dot, it must be empty or part of the current active path (for retracing)
   if (currentCell.pathColor && currentCell.pathColor !== activePathColor) {
-    return false; // Cannot cross path of different color
+    return false; 
   }
   
-  // Allow moving into a cell already part of the active path (retracing)
   if (currentCell.pathColor === activePathColor && currentCell.pathId === activePathId) {
      const isRetracing = activePath.points.some(p => p.x === targetX && p.y === targetY);
-     if (isRetracing) return true; // Further logic in updateActivePath will handle retracing
+     if (isRetracing) return true;
   }
 
-  // If cell is occupied by a completed path of the same color (but not the active one), it's invalid unless it's the target dot.
-  // This case is tricky. For now, let's assume completed paths are "fixed".
-  // If it's not a dot and has no path or path of same color (not yet completed for this pathId)
   return !currentCell.pathColor || currentCell.pathColor === activePathColor;
 }
 
@@ -98,12 +92,11 @@ export function updateGridWithPath(grid: GridCellData[][], path: DrawnPath, clea
   const newGrid = grid.map(row => row.map(cell => ({ ...cell })));
   path.points.forEach(point => {
     if (newGrid[point.y] && newGrid[point.y][point.x]) {
-      // Don't overwrite dot information itself, only path properties
       const cell = newGrid[point.y][point.x];
       if (!clear) {
         cell.pathColor = path.color;
         cell.pathId = path.id;
-      } else if (cell.pathId === path.id) { // Only clear if it was part of this specific path
+      } else if (cell.pathId === path.id) { 
         cell.pathColor = null;
         cell.pathId = null;
       }
@@ -116,8 +109,7 @@ export function updateGridWithPath(grid: GridCellData[][], path: DrawnPath, clea
 export function checkWinCondition(gameState: GameState, puzzle: PuzzleData): boolean {
   const { grid, paths, completedPairs } = gameState;
   
-  // 1. All dot pairs must be connected
-  const allRequiredPairIds = new Set(puzzle.dots.map(dot => dot.pairId));
+  const allRequiredPairIds = new Set(puzzle.flows.map(flow => flow.pairId));
   if (completedPairs.size !== allRequiredPairIds.size) {
     return false;
   }
@@ -127,15 +119,14 @@ export function checkWinCondition(gameState: GameState, puzzle: PuzzleData): boo
     }
   }
 
-  // 2. All cells must be filled by paths
   const puzzleSize = puzzle.size;
   for (let y = 0; y < puzzleSize; y++) {
     for (let x = 0; x < puzzleSize; x++) {
-      if (!grid[y][x].pathId) { // If any cell does not have a pathId, it's not filled
+      if (!grid[y][x].pathId) { 
         return false;
       }
     }
   }
   
-  return true; // If all pairs are connected AND all cells are filled
+  return true;
 }

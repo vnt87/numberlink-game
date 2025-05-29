@@ -1,11 +1,18 @@
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 export interface Dot {
-  id: string; // Unique identifier for the dot, e.g., "red-0", "red-1"
+  id: string; // Unique identifier for the dot, e.g., "red-0"
   x: number;
   y: number;
-  color: string; // Hex color string, e.g., "#FF0000"
-  pairId: string; // Identifier for the pair this dot belongs to, typically the color name like "red"
+  color: string; // Hex color string, e.g., "#FF0000" - can be useful for direct rendering if needed
+}
+
+export interface FlowData {
+  pairId: string; // Identifier for the pair this flow represents, typically the color name like "red"
+  color: string; // Hex color string for the flow
+  dots: [Dot, Dot]; // The two dots that this flow connects
+  solutionPath: { x: number; y: number }[]; // Sequence of grid coordinates for the solution path
 }
 
 export interface PuzzleData {
@@ -13,7 +20,7 @@ export interface PuzzleData {
   difficulty: Difficulty;
   name: string; // e.g., "Easy 1"
   size: number; // Grid size, e.g., 5 for a 5x5 grid
-  dots: Dot[]; // All dots for the puzzle
+  flows: FlowData[]; // Array of flows (dot pairs and their solutions) for the puzzle
 }
 
 export interface GridCellData {
@@ -36,7 +43,7 @@ export interface GameState {
   grid: GridCellData[][];
   paths: Record<string, DrawnPath>; // Keyed by pathId (e.g., "red")
   activePath: DrawnPath | null;
-  completedPairs: Set<string>; // Set of pathIds (colors) that are complete
+  completedPairs: Set<string>; // Set of pathIds (pairIds from FlowData) that are complete
 }
 
 export interface LevelCompletionStatus {
