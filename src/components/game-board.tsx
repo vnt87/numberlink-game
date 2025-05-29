@@ -5,7 +5,7 @@ import type { PuzzleData, GridCellData, GameState, DrawnPath, Dot } from '@/type
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { initializeGameState, isMoveValid, updateGridWithPath, checkWinCondition } from '@/lib/game-logic';
 import { Button } from '@/components/ui/button';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Lightbulb } from 'lucide-react';
 import WinModal from '@/components/win-modal';
 import { markLevelAsCompleted } from '@/lib/progress';
 import { cn } from '@/lib/utils';
@@ -255,6 +255,21 @@ export default function GameBoard({
       return;
     }
 
+    // If moving into the target dot for the active path
+    const targetCell = gameState.grid[coords.y][coords.x];
+    if (targetCell.isDot && targetCell.dot?.pairId === activePath.id) {
+        const newPoints = [...activePath.points, { x: coords.x, y: coords.y }];
+        const updatedActivePath = { ...activePath, points: newPoints };
+        setGameState(prev => ({
+            ...prev,
+            grid: updateGridWithPath(prev.grid, updatedActivePath),
+            activePath: updatedActivePath,
+            paths: { ...prev.paths, [activePath.id]: updatedActivePath },
+        }));
+        // Path will be finalized on PointerUp
+        return;
+    }
+
     if (isMoveValid(gameState, coords.x, coords.y)) {
       const newPoints = [...activePath.points, { x: coords.x, y: coords.y }];
       const updatedActivePath = { ...activePath, points: newPoints };
@@ -342,6 +357,81 @@ export default function GameBoard({
     }
   }, [gameState, puzzle, onLevelComplete, isDrawing, firstClickedDotInfo, showWinModal]);
 
+  const handleHint = () => {
+    if (showWinModal) return;
+
+    const incompletePairIds = puzzle.dots
+      .map(dot => dot.pairId)
+      .filter((pairId, index, self) => 
+        self.indexOf(pairId) === index && !gameState.completedPairs.has(pairId)
+      );
+
+    if (incompletePairIds.length === 0) {
+      return; // All pairs completed or no puzzle loaded
+    }
+
+    const randomPairId = incompletePairIds[Math.floor(Math.random() * incompletePairIds.length)];
+    const pairDots = puzzle.dots.filter(dot => dot.pairId === randomPairId);
+    if (pairDots.length !== 2) return; // Should always be 2
+
+    const [dot1, dot2] = pairDots;
+
+    // Construct the simple straight line path (current puzzles are vertical lines)
+    const hintPathPoints: { x: number; y: number }[] = [];
+    if (dot1.x === dot2.x) { // Vertical line
+      const startY = Math.min(dot1.y, dot2.y);
+      const endY = Math.max(dot1.y, dot2.y);
+      for (let y = startY; y <= endY; y++) {
+        hintPathPoints.push({ x: dot1.x, y });
+      }
+    } else if (dot1.y === dot2.y) { // Horizontal line (add if needed for future puzzles)
+      const startX = Math.min(dot1.x, dot2.x);
+      const endX = Math.max(dot1.x, dot2.x);
+      for (let x = startX; x <= endX; x++) {
+        hintPathPoints.push({ x, y: dot1.y });
+      }
+    } else {
+        // This case should not happen with current simple puzzle definitions
+        console.error("Hint logic error: Dots are not aligned for a simple path.");
+        return;
+    }
+    
+    if (hintPathPoints.length === 0) return;
+
+    const hintPath: DrawnPath = {
+      id: randomPairId,
+      color: dot1.color,
+      points: hintPathPoints,
+      isComplete: true,
+    };
+
+    let newGrid = gameState.grid;
+    // Clear any existing incomplete path for this pairId
+    const existingPath = gameState.paths[randomPairId];
+    if (existingPath && !existingPath.isComplete && existingPath.points.length > 0) {
+      newGrid = updateGridWithPath(newGrid, existingPath, true);
+    }
+
+    newGrid = updateGridWithPath(newGrid, hintPath);
+    const updatedPaths = { ...gameState.paths, [randomPairId]: hintPath };
+    const updatedCompletedPairs = new Set(gameState.completedPairs).add(randomPairId);
+
+    setGameState(prev => ({
+      ...prev,
+      grid: newGrid,
+      paths: updatedPaths,
+      activePath: null, // Ensure no active path after hint
+      completedPairs: updatedCompletedPairs,
+    }));
+    setFirstClickedDotInfo(null); // Clear any clicked dot selection
+  };
+
+
+  const allPairsCompleted = puzzle.dots
+    .map(d => d.pairId)
+    .filter((id, idx, arr) => arr.indexOf(id) === idx)
+    .every(pairId => gameState.completedPairs.has(pairId));
+
 
   return (
     <div className="flex flex-col items-center space-y-4">
@@ -418,9 +508,14 @@ export default function GameBoard({
           ))}
         </svg>
       </div>
-      <Button onClick={resetBoard} variant="outline" disabled={showWinModal}>
-        <RotateCcw className="mr-2 h-4 w-4" /> Reset Board
-      </Button>
+      <div className="flex space-x-3">
+        <Button onClick={resetBoard} variant="outline" disabled={showWinModal}>
+          <RotateCcw className="mr-2 h-4 w-4" /> Reset Board
+        </Button>
+        <Button onClick={handleHint} variant="outline" disabled={showWinModal || allPairsCompleted}>
+          <Lightbulb className="mr-2 h-4 w-4" /> Hint
+        </Button>
+      </div>
       {showWinModal && (
         <WinModal
           isOpen={showWinModal}
@@ -434,3 +529,4 @@ export default function GameBoard({
     </div>
   );
 }
+
