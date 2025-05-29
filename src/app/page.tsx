@@ -1,48 +1,28 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Brain, Gem } from 'lucide-react'; // Icons for difficulty levels
 import type { Difficulty } from '@/types';
 
-const difficultyLevels: { name: Difficulty; title: string; description: string; icon: React.ElementType }[] = [
-  { name: 'easy', title: 'Easy Breezy', description: 'Perfect for beginners. Relax and enjoy!', icon: Zap },
-  { name: 'medium', title: 'Medium Challenge', description: 'Test your skills with trickier puzzles.', icon: Brain },
-  { name: 'hard', title: 'Hardcore Flow', description: 'Only for the puzzle masters. Good luck!', icon: Gem },
+const difficultyLevels: { name: Difficulty; title: string }[] = [
+  { name: 'easy', title: 'Easy' },
+  { name: 'medium', title: 'Medium' },
+  { name: 'hard', title: 'Hard' },
 ];
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center justify-center space-y-8">
+    <div className="flex flex-col items-center justify-center space-y-12 py-10">
       <div className="text-center">
-        <h1 className="text-5xl font-bold text-primary">Welcome to StretchyKats!</h1>
-        <p className="text-muted-foreground mt-2 text-lg">Connect the dots, fill the board, and solve the puzzles.</p>
+        <h1 className="text-5xl font-bold text-primary mb-8">StretchyKats</h1>
+        <h2 className="text-3xl font-semibold mb-6 text-foreground">Select Difficulty</h2>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 w-full max-w-4xl">
+      <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 w-full max-w-md">
         {difficultyLevels.map((level) => (
-          <Card key={level.name} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="items-center text-center">
-              <level.icon className="w-12 h-12 text-primary mb-2" />
-              <CardTitle className="text-2xl">{level.title}</CardTitle>
-              <CardDescription>{level.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <Button asChild size="lg" className="w-full">
-                <Link href={`/levels/${level.name}`}>Play {level.title}</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <Button key={level.name} asChild size="lg" className="w-full">
+            <Link href={`/levels/${level.name}`}>{level.title}</Link>
+          </Button>
         ))}
-      </div>
-       <div className="mt-8 p-6 bg-card rounded-lg shadow-md w-full max-w-2xl">
-        <h2 className="text-xl font-semibold text-center mb-4">How to Play</h2>
-        <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-          <li>Select a difficulty and then choose a puzzle.</li>
-          <li>Click or tap on a colored dot to start drawing a line.</li>
-          <li>Drag the line to the matching colored dot.</li>
-          <li>Lines cannot cross each other.</li>
-          <li>Fill the entire board with lines to complete the puzzle!</li>
-        </ul>
       </div>
     </div>
   );
