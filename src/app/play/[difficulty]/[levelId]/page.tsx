@@ -7,7 +7,8 @@ import { getPuzzle, MAX_LEVELS } from '@/lib/puzzles-data';
 import type { Difficulty, PuzzleData } from '@/types';
 import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link'; // Keep Link for cases where direct navigation is okay or as a fallback.
+// Link component is not used directly for navigation that needs confirmation
+// import Link from 'next/link'; 
 import { ArrowLeft } from 'lucide-react';
 import LoadingSpinner from '@/components/loading-spinner';
 import ConfirmExitModal from '@/components/confirm-exit-modal';
@@ -16,7 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile'; // For responsive button
 export default function PlayLevelPage() {
   const router = useRouter();
   const params = useParams();
-  const pathname = usePathname();
+  const pathname = usePathname(); // Keep pathname for other potential uses if any
   const isMobile = useIsMobile();
 
   const difficulty = useMemo(() => params.difficulty as Difficulty, [params.difficulty]);
@@ -27,7 +28,9 @@ export default function PlayLevelPage() {
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [nextRoute, setNextRoute] = useState<string | null>(null);
-  const [isNavigationAllowed, setIsNavigationAllowed] = useState(false);
+  // isNavigationAllowed helps ensure that when we programmatically navigate after confirmation,
+  // any future interception logic (if added) doesn't re-trigger.
+  const [isNavigationAllowed, setIsNavigationAllowed] = useState(false); 
 
   useEffect(() => {
     if (difficulty && !isNaN(levelId)) {
@@ -36,43 +39,18 @@ export default function PlayLevelPage() {
       if (currentPuzzle) {
         setPuzzle(currentPuzzle);
       } else {
+        // If puzzle not found, redirect to the level selection for that difficulty
         router.replace(`/levels/${difficulty}`);
       }
       setIsLoading(false);
     }
   }, [difficulty, levelId, router]);
 
-  useEffect(() => {
-    const handleRouteChange = (url: string) => {
-      if (isNavigationAllowed) {
-        setIsNavigationAllowed(false); // Reset for the next user-initiated navigation
-        return;
-      }
-
-      // Only intercept if currently on a play page and navigating to a different URL
-      const isCurrentlyOnPlayPage = pathname.startsWith(`/play/${difficulty}/${levelId}`);
-      const isNavigatingAway = url !== pathname && !url.startsWith(pathname); // Basic check
-
-      if (isCurrentlyOnPlayPage && isNavigatingAway) {
-        // Prevent ShadCN dialogs from closing if a route change error is emitted.
-        // This helps keep the modal open.
-        document.body.setAttribute('data-scroll-locked-by-router', 'true');
-        
-        router.events.emit('routeChangeError');
-        setNextRoute(url);
-        setIsConfirmModalOpen(true);
-        // eslint-disable-next-line @typescript-eslint/no-throw-literal
-        throw 'Navigation cancelled by user confirmation.';
-      }
-    };
-
-    router.events.on('routeChangeStart', handleRouteChange);
-
-    return () => {
-      router.events.off('routeChangeStart', handleRouteChange);
-      document.body.removeAttribute('data-scroll-locked-by-router');
-    };
-  }, [router, difficulty, levelId, isNavigationAllowed, pathname]);
+  // Removed the useEffect block that used router.events, as it's not compatible with App Router
+  // and was causing the runtime error.
+  // Confirmation for "Back to Levels" is handled by its onClick handler.
+  // Confirmation for other navigation (e.g., header Home, browser back) is not implemented here
+  // to avoid complexity with App Router's navigation handling without router.events.
 
   const handleLevelComplete = () => {
     // This will be handled by the WinModal and progress saving logic
@@ -97,17 +75,16 @@ export default function PlayLevelPage() {
     }
     setIsConfirmModalOpen(false);
     setNextRoute(null);
-    document.body.removeAttribute('data-scroll-locked-by-router');
   };
 
   const cancelNavigation = () => {
     setIsConfirmModalOpen(false);
     setNextRoute(null);
     setIsNavigationAllowed(false); // Ensure it's reset
-    document.body.removeAttribute('data-scroll-locked-by-router');
   };
 
   const handleBackToLevelsClick = () => {
+    // Instead of navigating directly, set up the modal
     setNextRoute(`/levels/${difficulty}`);
     setIsConfirmModalOpen(true);
   };
@@ -121,7 +98,7 @@ export default function PlayLevelPage() {
       <div className="w-full max-w-3xl flex justify-between items-center">
         <Button 
           variant="outline" 
-          onClick={handleBackToLevelsClick}
+          onClick={handleBackToLevelsClick} // This now opens the modal
           size={isMobile ? "icon" : "default"}
           aria-label="Back to Levels"
           className="md:w-auto"
@@ -129,7 +106,7 @@ export default function PlayLevelPage() {
           <ArrowLeft className="h-4 w-4" />
           <span className="hidden md:inline md:ml-2">Back to Levels</span>
         </Button>
-        {/* The Home button here was removed, GameHeader provides the main Home button */}
+        {/* The Home button here was removed previously, GameHeader provides the main Home button */}
       </div>
       <GameBoard 
         puzzle={puzzle} 
