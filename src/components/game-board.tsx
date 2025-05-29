@@ -387,21 +387,28 @@ export default function GameBoard({
     const [dot1, dot2] = pairDots;
     const hintPathPoints: { x: number; y: number }[] = [];
     
+    // Assuming straight lines for current puzzles
     if (dot1.x === dot2.x) { // Vertical line
       const startY = Math.min(dot1.y, dot2.y);
       const endY = Math.max(dot1.y, dot2.y);
       for (let y = startY; y <= endY; y++) {
         hintPathPoints.push({ x: dot1.x, y });
       }
-    } else if (dot1.y === dot2.y) { // Horizontal line (add if needed for future puzzles)
+    } else if (dot1.y === dot2.y) { // Horizontal line
       const startX = Math.min(dot1.x, dot2.x);
       const endX = Math.max(dot1.x, dot2.x);
       for (let x = startX; x <= endX; x++) {
         hintPathPoints.push({ x, y: dot1.y });
       }
     } else {
-        console.error("Hint logic error: Dots are not aligned for a simple path.");
-        return;
+        // This case should ideally not happen with current puzzle generation (all straight lines)
+        // If puzzles become complex, this part needs advanced pathfinding.
+        console.error("Hint logic error: Dots are not aligned for a simple path. Advanced pathfinding needed for complex puzzles.");
+        // As a fallback for complex puzzles if they existed, just connect the two dots directly for the hint.
+        // For now, this won't be reached with current puzzle designs.
+        // hintPathPoints.push({ x: dot1.x, y: dot1.y });
+        // hintPathPoints.push({ x: dot2.x, y: dot2.y });
+        return; // Or handle error more gracefully
     }
     
     if (hintPathPoints.length === 0) return;
@@ -420,22 +427,20 @@ export default function GameBoard({
       const pointsToAnimate = hintData.path.points;
       const currentVisibleCount = hintData.visiblePoints.length;
 
-      if (pointsToAnimate.length <= 1) { // Path too short to animate
+      if (pointsToAnimate.length <= 1) { 
         setHintData(prev => ({ ...prev, visiblePoints: pointsToAnimate }));
         return;
       }
       
       if (currentVisibleCount === 0) {
-        // Add the first point immediately
         setHintData(prev => ({ ...prev, visiblePoints: [pointsToAnimate[0]] }));
       } else {
-        // Animate subsequent points
         const numberOfSegments = pointsToAnimate.length - 1;
         const delayPerSegment = HINT_ANIMATION_DURATION / numberOfSegments;
 
         animationTimer = setTimeout(() => {
           setHintData(prev => {
-            if (!prev.path) return prev; // Path might have been cleared
+            if (!prev.path) return prev; 
             const nextPoint = prev.path.points[prev.visiblePoints.length];
             if (nextPoint) {
               return { ...prev, visiblePoints: [...prev.visiblePoints, nextPoint] };
@@ -445,7 +450,6 @@ export default function GameBoard({
         }, delayPerSegment);
       }
     } else if (hintData.path && hintData.visiblePoints.length > 0 && hintData.visiblePoints.length === hintData.path.points.length) {
-      // All points are visible, set timer to hide the hint
       hideTimer = setTimeout(() => {
         setHintData({ path: null, visiblePoints: [] });
       }, HINT_VISIBLE_DURATION);
@@ -544,10 +548,20 @@ export default function GameBoard({
               cy={dot.y * CELL_SIZE + CELL_SIZE / 2}
               r={CELL_SIZE * DOT_RADIUS_PERCENT}
               fill={dot.color}
-              className={cn("cursor-pointer transition-all", 
+              className={cn(
+                "cursor-pointer transition-all duration-150", 
                 { 
-                  "ring-2 ring-offset-2 ring-foreground dark:ring-offset-background": firstClickedDotInfo?.dot.id === dot.id,
-                  "opacity-60": gameState.completedPairs.has(dot.pairId) && !(firstClickedDotInfo?.dot.id === dot.id)
+                  // Hint-specific styling (takes precedence)
+                  "opacity-30": hintData.path && hintData.path.id !== dot.pairId,
+                  // "opacity-100": hintData.path && hintData.path.id === dot.pairId, // Default, no explicit class needed if not dimmed
+
+                  // Styling when no hint is active
+                  "ring-2 ring-offset-2 ring-foreground dark:ring-offset-background":
+                    !hintData.path && firstClickedDotInfo?.dot.id === dot.id,
+                  "opacity-60":
+                    !hintData.path &&
+                    gameState.completedPairs.has(dot.pairId) &&
+                    !(firstClickedDotInfo?.dot.id === dot.id)
                 }
               )}
               data-dot-id={dot.id}
@@ -580,3 +594,5 @@ export default function GameBoard({
     </div>
   );
 }
+
+    
